@@ -1,3 +1,21 @@
+<div align="center">
+
+> **⚠️ TEMPORARY PATCH — NOT THE UPSTREAM PACKAGE**
+>
+> This is a **fork** of [LukeMathWalker/cargo-chef](https://github.com/LukeMathWalker/cargo-chef)
+> with an **unmerged feature** ([PR #360](https://github.com/LukeMathWalker/cargo-chef/pull/360):
+> `--external-only` flag for `cargo chef prepare`).
+>
+> We are **not planning to maintain a permanent fork**. Once the PR is merged upstream,
+> this fork will be deprecated in favour of the official `cargo-chef` crate.
+>
+> The package has been renamed to `torrust-cargo-chef` on crates.io to avoid conflicts
+> with the original `cargo-chef` crate.
+>
+> Install from source: `cargo install torrust-cargo-chef --locked`
+
+</div>
+
 <h1 align="center">cargo-chef</h1>
 <div align="center">
  <strong>
@@ -9,13 +27,13 @@
 
 <div align="center">
   <!-- Crates version -->
-  <a href="https://crates.io/crates/cargo-chef">
-    <img src="https://img.shields.io/crates/v/cargo-chef.svg?style=flat-square"
+  <a href="https://crates.io/crates/torrust-cargo-chef">
+    <img src="https://img.shields.io/crates/v/torrust-cargo-chef.svg?style=flat-square"
     alt="Crates.io version" />
   </a>
   <!-- Downloads -->
-  <a href="https://crates.io/crates/cargo-chef">
-    <img src="https://img.shields.io/crates/d/cargo-chef.svg?style=flat-square"
+  <a href="https://crates.io/crates/torrust-cargo-chef">
+    <img src="https://img.shields.io/crates/d/torrust-cargo-chef.svg?style=flat-square"
       alt="Download" />
   </a>
 </div>
@@ -24,22 +42,23 @@
 > `cargo-chef` was initially developed for the deployment chapter of [Zero to Production In Rust](https://zero2prod.com), a hands-on introduction to backend development using the Rust programming language.
 
 # Table of Contents
+
 0. [How to install](#how-to-install)
 1. [How to use](#how-to-use)
 2. [Benefits vs Limitations](#benefits-vs-limitations)
 3. [License](#license)
 
-## How To Install 
+## How To Install
 
-You can install `cargo-chef` from [crates.io](https://crates.io) with
+You can install `torrust-cargo-chef` from [crates.io](https://crates.io) with
 
 ```bash
-cargo install cargo-chef --locked
+cargo install torrust-cargo-chef --locked
 ```
 
 ## How to use
 
-> :warning:  **cargo-chef is not meant to be run locally**  
+> :warning: **cargo-chef is not meant to be run locally**  
 > Its primary use-case is to speed up container builds by running BEFORE
 > the actual source code is copied over. Don't run it on existing codebases to avoid
 > having files being overwritten.
@@ -72,7 +91,42 @@ cargo chef prepare --recipe-path recipe.json
 
 Nothing too mysterious going on here, you can examine the `recipe.json` file: it contains the skeleton of your project (e.g. all the `Cargo.toml` files with their relative path, the `Cargo.lock` file is available) plus a few additional pieces of information.  
  In particular it makes sure that all libraries and binaries are explicitly declared in their respective `Cargo.toml` files even if they can be found at the canonical default location (`src/main.rs` for a binary, `src/lib.rs` for a library).
- 
+
+#### `--external-only` (fork-only feature)
+
+> **⚠️ This flag is only available in the `torrust-cargo-chef` fork.**
+> See [PR #360](https://github.com/LukeMathWalker/cargo-chef/pull/360) for upstream status.
+
+Generate a recipe that excludes all `path = "..."` dependency entries, producing a
+stable recipe that only changes when an external (crates.io) dependency changes.
+
+Useful in large Cargo workspaces where internal manifest changes (adding/removing
+crates, renaming, restructuring) should not invalidate the compiled third-party
+dependency cache layer:
+
+```bash
+# Stable third-party-only recipe (only changes when an external dep changes)
+cargo chef prepare --external-only --recipe-path recipe-thirdparty.json
+
+# Standard full recipe (captures workspace structure too)
+cargo chef prepare --recipe-path recipe.json
+```
+
+In a Dockerfile, use two cook stages to keep third-party artifacts cached:
+
+```dockerfile
+# First cook: third-party only — stable across workspace-internal changes
+COPY --from=planner /app/recipe-thirdparty.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
+# Second cook: full workspace — reuses third-party artifacts from above
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+```
+
+See [`examples/workspace-split-cache/`](examples/workspace-split-cache/) for a
+complete walkthrough with measured timings.
+
 The `recipe.json` is the equivalent of the Python `requirements.txt` file - it is the only input required for `cargo chef cook`, the command that will build out our dependencies:
 
 ```bash
@@ -101,7 +155,7 @@ FROM chef AS planner
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-FROM chef AS builder 
+FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 # Build dependencies - this is the caching Docker layer!
 RUN cargo chef cook --release --recipe-path recipe.json
@@ -125,30 +179,32 @@ We offer `lukemathwalker/cargo-chef` as a pre-built Docker image equipped with b
 
 The tagging scheme is `<cargo-chef version>-rust-<rust tag>`. For example, `0.1.74-rust-1.56.0`.
 We publish tags for every `library/rust` alias, including:
+
 - `latest-rust-<alias>` (latest `cargo-chef` version, specific Rust version)
 - `<cargo-chef version>-rust-<alias>` (specific `cargo-chef` version, specific Rust version)
 - `latest` (latest `cargo-chef` version, latest Rust version, matching upstream Rust `latest`)
 
 Aliases come directly from [official Rust images](https://hub.docker.com/_/rust/#supported-tags-and-respective-dockerfile-links), e.g.:
+
 - `1`, `1.93`, `1.93.1`
 - `bookworm`, `slim-bookworkm`, `bullseye`, `trixie`, `alpine3.23`
 - `1.93.1-bookworm`, `1.93.1-slim`, `1.93.1-alpine3.23`
 
 Visit [`cargo-chef` page on DockerHub](https://hub.docker.com/r/lukemathwalker/cargo-chef/tags) for an exhaustive list of available tags.
 
-> :warning:  **You must use the same Rust version in all stages**  
+> :warning: **You must use the same Rust version in all stages**  
 > If you use a different Rust version in one of the stages
 > caching will not work as expected.
-  
+
 ### Without the pre-built image
 
 If you do not want to use the `lukemathwalker/cargo-chef` image, you can simply install the CLI within the Dockerfile:
 
 ```dockerfile
-FROM rust:1 AS chef 
-# We only pay the installation cost once, 
+FROM rust:1 AS chef
+# We only pay the installation cost once,
 # it will be cached from the second build onwards
-RUN cargo install --locked cargo-chef 
+RUN cargo install --locked torrust-cargo-chef
 WORKDIR app
 
 FROM chef AS planner
@@ -180,7 +236,7 @@ toolchain must be explicitly specified.
 A sample Dockerfile looks like this:
 
 ```dockerfile
-# Using the `rust-musl-builder` as base image, instead of 
+# Using the `rust-musl-builder` as base image, instead of
 # the official Rust toolchain
 FROM clux/muslrust:stable AS chef
 USER root

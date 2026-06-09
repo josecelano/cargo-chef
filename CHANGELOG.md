@@ -5,7 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] — torrust-cargo-chef fork
+
+> **Note:** This is the `torrust-cargo-chef` fork. See [PR #360](https://github.com/LukeMathWalker/cargo-chef/pull/360)
+> for upstream status of the `--external-only` feature. Once merged upstream, this fork
+> will be deprecated in favour of the official `cargo-chef`.
 
 ### Added
 
